@@ -16,6 +16,8 @@ from fhirmodels.fhir_package import FhirPackage, FhirPackageLoader
 
 import resource_map
 import profile_map
+import fhir_types
+import utils
 
 
 def replace_index(path: str) -> str:
@@ -48,9 +50,9 @@ def check_structure(rm: resource_map.ResourceMap, pm: profile_map.ProfileMap):
 
 def check_cardinality(rm: resource_map.ResourceMap, pm: profile_map.ProfileMap):
     # iterate over elements in the resource and check if the cardinality is correct
-    for r_path, r_element in rm.map.items():
+    for r_path, r_el in rm.map.items():
         r_path = replace_index(r_path)
-        r_card = r_element.cardinality
+        r_card = r_el.cardinality
 
         p_max = pm[r_path].element.get("max")
         p_max = int(p_max) if p_max != "*" else "*"
@@ -72,15 +74,48 @@ def check_cardinality(rm: resource_map.ResourceMap, pm: profile_map.ProfileMap):
 
 def check_value_domains(rm: resource_map.ResourceMap, pm: profile_map.ProfileMap):
     # iterate over elements in the resource and check if the value domain is correct
-    for r_path, r_element in rm.map.items():
+    # at the moment only checking primitive types
+    for r_path, r_el in rm.map.items():
+        r_path = replace_index(r_path)
+        if r_el.is_primitive:
+            p_el = pm[r_path]
+            p_type = p_el.element["type"][0]["code"]
+            try:
+                res = fhir_types.check_primitive_fhir_type(
+                    fhir_type=p_type, value=r_el.value
+                )
+            except Exception as e:
+                raise e
+                # print(f"Value domain error: {r_element.value} is not a valid {p_type}")
+                raise Exception("Invalid Value Domain")
+            if not res:
+                print(f"Value domain error: {r_el.value} is not a valid {p_type}")
+                raise Exception("Invalid Value Domain")
+
+
+def check_coding_bindings(
+    rm: resource_map.ResourceMap, pm: profile_map.ProfileMap, package: FhirPackage
+):
+    # iterate over elements in the resource and check if the coding bindings are correct
+    for r_path, r_el in rm.map.items():
+        found = False
         r_path = replace_index(r_path)
         p_el = pm[r_path]
-        print(r_path, r_element.value, p_el.element.get("type"))
-
-
-def check_coding_bindings():
-    # iterate over elements in the resource and check if the coding bindings are correct
-    pass
+        if "binding" in p_el.element:
+            binding = p_el.element["binding"]
+            if binding["strength"] == "required":
+                valueset = binding["valueSet"]
+                valueset = utils.remove_after_pipe(valueset)
+                for vs in package.value_sets:
+                    if vs["url"] == valueset:
+                        for concept in vs["concept"]:
+                            print(concept)
+                            if concept["code"] == r_el.value:
+                                found = True
+                                break
+                if not found:
+                    print(f"ValueSet {valueset} not found")
+                    raise Exception("Invalid Coding Binding")
 
 
 def check_invariants():
@@ -124,6 +159,7 @@ def validate(
     check_structure(rm, pm)
     check_cardinality(rm, pm)
     check_value_domains(rm, pm)
+    check_coding_bindings(rm, pm, base_package)
     return rm, pm
 
 

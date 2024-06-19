@@ -11,6 +11,7 @@ class ResourceMapElement:
     path: str
     profile_path: str
     cardinality: int
+    is_primitive: bool
     value: str | int | None = None
     value_domain: str | None = None
     coding_bindings: str | None = None
@@ -58,6 +59,7 @@ class ResourceMapBuilder:
                     profile_path=parent_profile_path,
                     value=None,
                     cardinality=cardinality,
+                    is_primitive=False,
                 )
                 _map[parent_path] = el
                 for key, value in element.items():
@@ -77,6 +79,7 @@ class ResourceMapBuilder:
                     path=parent_path,
                     profile_path=parent_profile_path,
                     value=element,
+                    is_primitive=True,
                     cardinality=1,
                 )
                 _map[parent_path] = el

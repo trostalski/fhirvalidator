@@ -35,40 +35,5 @@ def flatten_resource(resource):
     return list(flatten_element(resource, ""))
 
 
-def is_primitive_element(element: dict):
-    if "type" in element:
-        return element["type"][0].get("code") in c.PRIMITIVE_ELEMENT_TYPES
-
-
-def is_invalid_element(element: dict):
-    if not "type" in element:
-        return True
-
-
-def is_contained_element(element: dict):
-    if "type" in element:
-        return element["type"][0].get("code") in c.CONTAINED_ELEMENT_TYPES
-
-
-def is_complex_element(element: dict):
-    if "type" in element:
-        return element["type"][0].get("code") in c.COMPLEX_ELEMENT_TYPES
-
-
-def is_multi_type_string(input: str):
-    return "[x]" in input
-
-
-def is_primitive_kind(structure_definition: dict):
-    return structure_definition["kind"] == c.PRIMITIVE_KIND
-
-
-def is_complex_kind(structure_definition: dict):
-    return structure_definition["kind"] == c.COMPLEX_KIND
-
-
-def get_full_path(element: dict, parent_path: str):
-    id = element.get("id")
-    suffix = id.split(".")[1:]
-    suffix = ".".join(suffix)
-    return f"{parent_path}.{suffix}" if parent_path else suffix
+def remove_after_pipe(s: str) -> str:
+    return s.split("|")[0]
